@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Katalog Buku - Firebase Realtime Database + Authentication</title>
+
+  <!-- Bootstrap 5 + Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --ink: #14213d;
+      --teal: #0f766e;
+      --teal-dark: #0b5a54;
+      --mist: #eef2f6;
+      --line: #d5dde6;
+    }
+    body {
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      background: var(--mist);
+      color: var(--ink);
+    }
+    .hero {
+      background: var(--ink);
+      color: #fff;
+      padding: 2.5rem 0 4.5rem;
+    }
+    .hero h1 { font-weight: 800; letter-spacing: -0.02em; }
+    .hero p  { color: #b9c4d6; max-width: 46ch; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.1); border-radius: 999px;
+      padding: .35rem .9rem; font-size: .85rem;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; }
+    .dot.online  { background: #34d399; }
+    .dot.offline { background: #f87171; }
+
+    .panel {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: 14px; margin-top: -3rem;
+    }
+    .btn-teal { background: var(--teal); border-color: var(--teal); color: #fff; }
+    .btn-teal:hover { background: var(--teal-dark); border-color: var(--teal-dark); color: #fff; }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--teal); box-shadow: 0 0 0 .2rem rgba(15,118,110,.2);
+    }
+    .table thead th {
+      font-weight: 600; font-size: .85rem; color: #5b6b82;
+      border-bottom: 2px solid var(--line);
+    }
+    .badge-cat { background: #ccfbf1; color: var(--teal-dark); font-weight: 600; }
+    .stok-habis { color: #b91c1c; font-weight: 700; }
+    tr.editing { background: #fffbeb; }
+    .empty { padding: 3rem 1rem; color: #6b7a90; }
+
+    /* ---- Auth ---- */
+    #authWrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+    .auth-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; width: 100%; max-width: 420px; padding: 2rem; }
+    .auth-brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.25rem; }
+    .auth-brand i { font-size: 1.6rem; color: var(--teal); }
+    .auth-tabs { display: flex; background: var(--mist); border-radius: 10px; padding: 4px; margin-bottom: 1.25rem; }
+    .auth-tabs button {
+      flex: 1; border: none; background: transparent; padding: .5rem; border-radius: 8px;
+      font-weight: 600; color: #5b6b82; cursor: pointer;
+    }
+    .auth-tabs button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .user-pill {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.1); border-radius: 999px;
+      padding: .35rem .9rem .35rem .6rem; font-size: .85rem; color: #fff;
+    }
+    .user-pill .avatar {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--teal);
+      display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700;
+    }
+    #appWrap { display: none; }
+  </style>
+</head>
+<body>
+
+
+  <div id="authWrap">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <i class="bi bi-book-half"></i>
+        <div>
+          <div class="fw-bold">Katalog Buku</div>
+          <div class="text-secondary" style="font-size:.8rem;">Masuk untuk mengelola data buku</div>
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" id="tabLogin" class="active">Login</button>
+        <button type="button" id="tabRegister">Daftar</button>
+      </div>
+
+      <div id="authAlert" class="alert alert-danger py-2 d-none" role="alert"></div>
+
+
+      <div class="mb-3 d-none" id="groupNama">
+        <label for="authNama" class="form-label fw-semibold">Nama</label>
+        <input type="text" id="authNama" class="form-control" placeholder="Nama Anda">
+      </div>
+
+      <div class="mb-3">
+        <label for="authEmail" class="form-label fw-semibold">Email</label>
+        <input type="email" id="authEmail" class="form-control" placeholder="nama@email.com">
+      </div>
+
+      <div class="mb-3">
+        <label for="authPassword" class="form-label fw-semibold">Kata sandi</label>
+        <input type="password" id="authPassword" class="form-control" placeholder="Minimal 6 karakter">
+      </div>
+
+      <button id="btnAuthSubmit" class="btn btn-teal w-100">
+        <i class="bi bi-box-arrow-in-right"></i> <span id="btnAuthSubmitText">Login</span>
+      </button>
+
+      <p class="text-center text-secondary mt-3 mb-0" style="font-size:.8rem;">
+        Data akun disimpan lewat Firebase Authentication.
+      </p>
+    </div>
+  </div>
+
+  <div id="appWrap">
+
+    <!-- HEADER -->
+    <header class="hero">
+      <div class="container">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+          <span id="status" class="status-pill">
+            <span id="statusDot" class="dot"></span>
+            <span id="statusText">Menghubungkan ke Firebase...</span>
+          </span>
+
+          <span class="user-pill">
+            <span class="avatar" id="userAvatar">?</span>
+            <span id="userEmail"></span>
+            <button id="btnLogout" class="btn btn-sm btn-outline-light ms-2 py-0 px-2">Keluar</button>
+          </span>
+        </div>
+        <h1 class="display-6">Katalog Buku Perpustakaan</h1>
+        <p class="mb-0">Tambah, ubah, dan hapus data buku. Semua perubahan tersimpan di Firebase dan langsung muncul di semua perangkat.</p>
+      </div>
+    </header>
+
+    <main class="container pb-5">
+      <div class="row g-4">
+
+
+        <div class="col-lg-4">
+          <div class="panel p-4">
+            <h2 class="h5 fw-bold mb-3" id="formTitle">Tambah buku</h2>
+
+            <div id="formAlert" class="alert alert-danger py-2 d-none" role="alert"></div>
+
+            <div class="mb-3">
+              <label for="judul" class="form-label fw-semibold">Judul</label>
+              <input type="text" id="judul" class="form-control" placeholder="Contoh: Laskar Pelangi">
+            </div>
+
+            <div class="mb-3">
+              <label for="penulis" class="form-label fw-semibold">Penulis</label>
+              <input type="text" id="penulis" class="form-control" placeholder="Contoh: Andrea Hirata">
+            </div>
+
+            <div class="mb-3">
+              <label for="kategori" class="form-label fw-semibold">Kategori</label>
+              <select id="kategori" class="form-select">
+                <option value="">Pilih kategori</option>
+                <option>Fiksi</option>
+                <option>Non-Fiksi</option>
+                <option>Sains</option>
+                <option>Teknologi</option>
+                <option>Sejarah</option>
+                <option>Pendidikan</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label for="tahun" class="form-label fw-semibold">Tahun terbit</label>
+                <input type="number" id="tahun" class="form-control" placeholder="2005" min="1000" max="2100">
+              </div>
+              <div class="col-6 mb-3">
+                <label for="stok" class="form-label fw-semibold">Stok</label>
+                <input type="number" id="stok" class="form-control" placeholder="3" min="0">
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button id="btnSimpan" class="btn btn-teal flex-grow-1">
+                <i class="bi bi-plus-lg"></i> Tambah buku
+              </button>
+              <button id="btnBatal" class="btn btn-outline-secondary d-none">Batal</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABEL (Read) -->
+        <div class="col-lg-8">
+          <div class="panel p-4">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+              <h2 class="h5 fw-bold mb-0">Daftar buku <span id="jumlah" class="text-secondary fw-normal fs-6"></span></h2>
+              <div class="input-group" style="max-width: 260px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="search" id="cari" class="form-control" placeholder="Cari judul atau penulis">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Judul</th>
+                    <th>Penulis</th>
+                    <th>Kategori</th>
+                    <th>Tahun</th>
+                    <th>Stok</th>
+                    <th class="text-end">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelBuku"></tbody>
+              </table>
+            </div>
+            <div id="kosong" class="empty text-center d-none">
+              <i class="bi bi-journal-plus fs-1"></i>
+              <p class="mb-0 mt-2">Belum ada buku. Isi form di samping untuk menambahkan buku pertama.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+
+    <div class="modal fade" id="modalHapus" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Hapus buku?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+          <div class="modal-body">
+            Buku <strong id="namaHapus"></strong> akan dihapus permanen dari database.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-danger" id="btnKonfirmasiHapus">Hapus buku</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase, ref, push, set, update, remove, onValue
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import {
+      getAuth, onAuthStateChanged, signOut,
+      createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      updateProfile
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDRYJcIoIwC66gqPPKuJH-w3J_mAG-hQng",
+      authDomain: "katalog-buku-6d58d.firebaseapp.com",
+      databaseURL: "https://katalog-buku-6d58d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "katalog-buku-6d58d",
+      storageBucket: "katalog-buku-6d58d.firebasestorage.app",
+      messagingSenderId: "1021313311688",
+      appId: "1:1021313311688:web:489e15ca643c0c541156fd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const booksRef = ref(db, "buku");          // node utama: /buku
+
+    const $ = (id) => document.getElementById(id);
+    const el = {
+      // auth
+      authWrap: $("authWrap"), appWrap: $("appWrap"),
+      tabLogin: $("tabLogin"), tabRegister: $("tabRegister"),
+      groupNama: $("groupNama"), authNama: $("authNama"),
+      authEmail: $("authEmail"), authPassword: $("authPassword"),
+      authAlert: $("authAlert"),
+      btnAuthSubmit: $("btnAuthSubmit"), btnAuthSubmitText: $("btnAuthSubmitText"),
+      userEmail: $("userEmail"), userAvatar: $("userAvatar"), btnLogout: $("btnLogout"),
+      // crud
+      judul: $("judul"), penulis: $("penulis"), kategori: $("kategori"),
+      tahun: $("tahun"), stok: $("stok"),
+      btnSimpan: $("btnSimpan"), btnBatal: $("btnBatal"),
+      formTitle: $("formTitle"), formAlert: $("formAlert"),
+      tabel: $("tabelBuku"), kosong: $("kosong"), jumlah: $("jumlah"), cari: $("cari"),
+      namaHapus: $("namaHapus"), btnKonfirmasiHapus: $("btnKonfirmasiHapus"),
+      statusDot: $("statusDot"), statusText: $("statusText")
+    };
+    const modalHapus = new bootstrap.Modal($("modalHapus"));
+
+    let dataBuku = {};      // cache data dari Firebase: { id: {judul, ...} }
+    let editId = null;      // id buku yang sedang diedit (null = mode tambah)
+    let hapusId = null;     // id buku yang akan dihapus
+    let unsubscribeBuku = null; // listener database, dimatikan saat logout
+
+    let modeAuth = "login"; 
+
+    function tampilkanErrorAuth(pesan) {
+      el.authAlert.textContent = pesan;
+      el.authAlert.classList.remove("d-none");
+    }
+    function sembunyikanErrorAuth() {
+      el.authAlert.classList.add("d-none");
+    }
+
+    function pesanErrorFirebase(err) {
+      const map = {
+        "auth/email-already-in-use": "Email sudah terdaftar. Silakan login.",
+        "auth/invalid-email": "Format email tidak valid.",
+        "auth/weak-password": "Kata sandi minimal 6 karakter.",
+        "auth/missing-password": "Kata sandi wajib diisi.",
+        "auth/invalid-credential": "Email atau kata sandi salah.",
+        "auth/user-not-found": "Akun dengan email ini tidak ditemukan.",
+        "auth/wrong-password": "Kata sandi salah.",
+        "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti."
+      };
+      return map[err.code] || ("Gagal: " + err.message);
+    }
+
+    function gantiTabAuth(mode) {
+      modeAuth = mode;
+      sembunyikanErrorAuth();
+      const isRegister = mode === "register";
+      el.tabLogin.classList.toggle("active", !isRegister);
+      el.tabRegister.classList.toggle("active", isRegister);
+      el.groupNama.classList.toggle("d-none", !isRegister);
+      el.btnAuthSubmitText.textContent = isRegister ? "Daftar" : "Login";
+    }
+    el.tabLogin.addEventListener("click", () => gantiTabAuth("login"));
+    el.tabRegister.addEventListener("click", () => gantiTabAuth("register"));
+
+    el.btnAuthSubmit.addEventListener("click", async () => {
+      sembunyikanErrorAuth();
+      const email = el.authEmail.value.trim();
+      const password = el.authPassword.value;
+      const nama = el.authNama.value.trim();
+
+      if (!email || !password) return tampilkanErrorAuth("Email dan kata sandi wajib diisi.");
+      if (modeAuth === "register" && !nama) return tampilkanErrorAuth("Nama wajib diisi.");
+
+      el.btnAuthSubmit.disabled = true;
+      try {
+        if (modeAuth === "register") {
+
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          await updateProfile(cred.user, { displayName: nama });
+        } else {
+
+          await signInWithEmailAndPassword(auth, email, password);
+        }
+
+      } catch (err) {
+        tampilkanErrorAuth(pesanErrorFirebase(err));
+      } finally {
+        el.btnAuthSubmit.disabled = false;
+      }
+    });
+
+    el.btnLogout.addEventListener("click", () => signOut(auth));
+
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        el.authWrap.style.display = "none";
+        el.appWrap.style.display = "block";
+        el.userEmail.textContent = user.displayName || user.email;
+        el.userAvatar.textContent = (user.displayName || user.email || "?").charAt(0).toUpperCase();
+        el.authEmail.value = el.authPassword.value = el.authNama.value = "";
+
+
+        unsubscribeBuku = onValue(booksRef, (snapshot) => {
+          dataBuku = snapshot.val() || {};
+          render();
+        }, (err) => tampilkanError("Gagal membaca data: " + err.message));
+      } else {
+        el.appWrap.style.display = "none";
+        el.authWrap.style.display = "flex";
+        if (unsubscribeBuku) { unsubscribeBuku(); unsubscribeBuku = null; }
+        resetForm();
+        dataBuku = {};
+      }
+    });
+
+    // Status koneksi Firebase (database)
+    onValue(ref(db, ".info/connected"), (snap) => {
+      const online = snap.val() === true;
+      el.statusDot.className = "dot " + (online ? "online" : "offline");
+      el.statusText.textContent = online ? "Terhubung ke Firebase" : "Tidak terhubung";
+    });
+
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text ?? "";
+      return div.innerHTML;
+    }
+
+    function tampilkanError(pesan) {
+      el.formAlert.textContent = pesan;
+      el.formAlert.classList.remove("d-none");
+    }
+    function sembunyikanError() {
+      el.formAlert.classList.add("d-none");
+    }
+
+    function resetForm() {
+      editId = null;
+      el.judul.value = el.penulis.value = el.kategori.value = el.tahun.value = el.stok.value = "";
+      el.formTitle.textContent = "Tambah buku";
+      el.btnSimpan.innerHTML = '<i class="bi bi-plus-lg"></i> Tambah buku';
+      el.btnBatal.classList.add("d-none");
+      sembunyikanError();
+      render();
+    }
+
+    function validasi() {
+      if (!el.judul.value.trim())   return "Judul wajib diisi.";
+      if (!el.penulis.value.trim()) return "Penulis wajib diisi.";
+      if (!el.kategori.value)       return "Pilih kategori buku.";
+      const tahun = Number(el.tahun.value);
+      if (!el.tahun.value || tahun < 1000 || tahun > 2100) return "Tahun terbit harus antara 1000 dan 2100.";
+      if (el.stok.value === "" || Number(el.stok.value) < 0) return "Stok tidak boleh kosong atau negatif.";
+      return null;
+    }
+
+
+    el.btnSimpan.addEventListener("click", async () => {
+      const error = validasi();
+      if (error) return tampilkanError(error);
+      sembunyikanError();
+
+      const buku = {
+        judul: el.judul.value.trim(),
+        penulis: el.penulis.value.trim(),
+        kategori: el.kategori.value,
+        tahun: Number(el.tahun.value),
+        stok: Number(el.stok.value)
+      };
+
+      try {
+        if (editId) {
+
+          await update(ref(db, `buku/${editId}`), buku);
+        } else {
+          // CREATE: push() membuat ID unik otomatis, lalu set() menyimpan datanya
+          buku.dibuatPada = Date.now();
+          buku.dibuatOleh = auth.currentUser ? (auth.currentUser.email || "") : "";
+          await set(push(booksRef), buku);
+        }
+        resetForm();
+      } catch (err) {
+        tampilkanError("Gagal menyimpan: " + err.message);
+      }
+    });
+
+    el.btnBatal.addEventListener("click", resetForm);
+
+    function render() {
+      const kata = el.cari.value.trim().toLowerCase();
+      const daftar = Object.entries(dataBuku)
+        .filter(([, b]) =>
+          b.judul.toLowerCase().includes(kata) || b.penulis.toLowerCase().includes(kata))
+        .sort((a, b) => (b[1].dibuatPada || 0) - (a[1].dibuatPada || 0));
+
+      el.jumlah.textContent = `(${daftar.length} dari ${Object.keys(dataBuku).length})`;
+      el.kosong.classList.toggle("d-none", daftar.length > 0);
+
+      el.tabel.innerHTML = daftar.map(([id, b]) => `
+        <tr class="${id === editId ? "editing" : ""}">
+          <td class="fw-semibold">${escapeHtml(b.judul)}</td>
+          <td>${escapeHtml(b.penulis)}</td>
+          <td><span class="badge badge-cat">${escapeHtml(b.kategori)}</span></td>
+          <td>${escapeHtml(String(b.tahun))}</td>
+          <td class="${b.stok === 0 ? "stok-habis" : ""}">${b.stok === 0 ? "Habis" : escapeHtml(String(b.stok))}</td>
+          <td class="text-end text-nowrap">
+            <button class="btn btn-sm btn-outline-secondary" data-aksi="edit" data-id="${id}" title="Ubah">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-aksi="hapus" data-id="${id}" title="Hapus">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    el.cari.addEventListener("input", render);
+
+    el.tabel.addEventListener("click", (e) => {
+      const tombol = e.target.closest("button[data-aksi]");
+      if (!tombol) return;
+      const id = tombol.dataset.id;
+      const buku = dataBuku[id];
+
+      if (tombol.dataset.aksi === "edit") {
+        editId = id;
+        el.judul.value = buku.judul;
+        el.penulis.value = buku.penulis;
+        el.kategori.value = buku.kategori;
+        el.tahun.value = buku.tahun;
+        el.stok.value = buku.stok;
+        el.formTitle.textContent = "Ubah buku";
+        el.btnSimpan.innerHTML = '<i class="bi bi-check-lg"></i> Simpan perubahan';
+        el.btnBatal.classList.remove("d-none");
+        sembunyikanError();
+        render();
+        el.judul.focus();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        hapusId = id;
+        el.namaHapus.textContent = buku.judul;
+        modalHapus.show();
+      }
+    });
+
+    el.btnKonfirmasiHapus.addEventListener("click", async () => {
+      try {
+        await remove(ref(db, `buku/${hapusId}`));
+        if (editId === hapusId) resetForm();
+      } catch (err) {
+        alert("Gagal menghapus: " + err.message);
+      }
+      modalHapus.hide();
+    });
+  </script>
+</body>
+</html>
