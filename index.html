@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Katalog Buku - Firebase Realtime Database + Authentication</title>
 
-  <!-- Bootstrap 5 + Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
@@ -57,7 +56,6 @@
     tr.editing { background: #fffbeb; }
     .empty { padding: 3rem 1rem; color: #6b7a90; }
 
-    /* ---- Auth ---- */
     #authWrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
     .auth-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; width: 100%; max-width: 420px; padding: 2rem; }
     .auth-brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.25rem; }
@@ -82,7 +80,6 @@
 </head>
 <body>
 
-
   <div id="authWrap">
     <div class="auth-card">
       <div class="auth-brand">
@@ -99,36 +96,52 @@
       </div>
 
       <div id="authAlert" class="alert alert-danger py-2 d-none" role="alert"></div>
+      <div id="authInfo" class="alert alert-success py-2 d-none" role="alert"></div>
 
-
-      <div class="mb-3 d-none" id="groupNama">
-        <label for="authNama" class="form-label fw-semibold">Nama</label>
-        <input type="text" id="authNama" class="form-control" placeholder="Nama Anda">
+      <div id="cekEmailBox" class="text-center d-none">
+        <i class="bi bi-envelope-check" style="font-size:2.5rem;color:var(--teal);"></i>
+        <h2 class="h6 fw-bold mt-2 mb-1">Cek email Anda</h2>
+        <p class="text-secondary" style="font-size:.9rem;">
+          Link verifikasi sudah dikirim ke <strong id="emailDikirim"></strong>.
+          Klik link tersebut, lalu login kembali di sini.
+        </p>
+        <button id="btnKirimUlangAwal" class="btn btn-outline-secondary btn-sm">Kirim ulang email</button>
+        <button id="btnKeAuthForm" class="btn btn-link btn-sm d-block mx-auto mt-2">Kembali ke form login</button>
       </div>
 
-      <div class="mb-3">
-        <label for="authEmail" class="form-label fw-semibold">Email</label>
-        <input type="email" id="authEmail" class="form-control" placeholder="nama@email.com">
+      <div id="authFormBox">
+        <div class="mb-3 d-none" id="groupNama">
+          <label for="authNama" class="form-label fw-semibold">Nama</label>
+          <input type="text" id="authNama" class="form-control" placeholder="Nama Anda">
+        </div>
+
+        <div class="mb-3">
+          <label for="authEmail" class="form-label fw-semibold">Email</label>
+          <input type="email" id="authEmail" class="form-control" placeholder="nama@email.com">
+        </div>
+
+        <div class="mb-3">
+          <label for="authPassword" class="form-label fw-semibold">Kata sandi</label>
+          <input type="password" id="authPassword" class="form-control" placeholder="Minimal 6 karakter">
+        </div>
+
+        <button id="btnAuthSubmit" class="btn btn-teal w-100">
+          <i class="bi bi-box-arrow-in-right"></i> <span id="btnAuthSubmitText">Login</span>
+        </button>
+
+        <button id="btnKirimUlangLogin" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none">
+          Kirim ulang email verifikasi
+        </button>
+
+        <p class="text-center text-secondary mt-3 mb-0" style="font-size:.8rem;">
+          Data akun disimpan lewat Firebase Authentication.
+        </p>
       </div>
-
-      <div class="mb-3">
-        <label for="authPassword" class="form-label fw-semibold">Kata sandi</label>
-        <input type="password" id="authPassword" class="form-control" placeholder="Minimal 6 karakter">
-      </div>
-
-      <button id="btnAuthSubmit" class="btn btn-teal w-100">
-        <i class="bi bi-box-arrow-in-right"></i> <span id="btnAuthSubmitText">Login</span>
-      </button>
-
-      <p class="text-center text-secondary mt-3 mb-0" style="font-size:.8rem;">
-        Data akun disimpan lewat Firebase Authentication.
-      </p>
     </div>
   </div>
 
   <div id="appWrap">
 
-    <!-- HEADER -->
     <header class="hero">
       <div class="container">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
@@ -150,7 +163,6 @@
 
     <main class="container pb-5">
       <div class="row g-4">
-
 
         <div class="col-lg-4">
           <div class="panel p-4">
@@ -201,7 +213,6 @@
           </div>
         </div>
 
-        <!-- TABEL (Read) -->
         <div class="col-lg-8">
           <div class="panel p-4">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
@@ -237,7 +248,6 @@
       </div>
     </main>
 
-
     <div class="modal fade" id="modalHapus" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -261,7 +271,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script type="module">
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getDatabase, ref, push, set, update, remove, onValue
@@ -269,7 +278,7 @@
     import {
       getAuth, onAuthStateChanged, signOut,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
-      updateProfile
+      updateProfile, sendEmailVerification
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -285,19 +294,24 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const booksRef = ref(db, "buku");          // node utama: /buku
+    const booksRef = ref(db, "buku");
+
+    const actionCodeSettings = {
+      url: window.location.origin + window.location.pathname
+    };
 
     const $ = (id) => document.getElementById(id);
     const el = {
-      // auth
       authWrap: $("authWrap"), appWrap: $("appWrap"),
       tabLogin: $("tabLogin"), tabRegister: $("tabRegister"),
       groupNama: $("groupNama"), authNama: $("authNama"),
       authEmail: $("authEmail"), authPassword: $("authPassword"),
-      authAlert: $("authAlert"),
+      authAlert: $("authAlert"), authInfo: $("authInfo"),
+      authFormBox: $("authFormBox"), cekEmailBox: $("cekEmailBox"), emailDikirim: $("emailDikirim"),
+      btnKirimUlangAwal: $("btnKirimUlangAwal"), btnKeAuthForm: $("btnKeAuthForm"),
+      btnKirimUlangLogin: $("btnKirimUlangLogin"),
       btnAuthSubmit: $("btnAuthSubmit"), btnAuthSubmitText: $("btnAuthSubmitText"),
       userEmail: $("userEmail"), userAvatar: $("userAvatar"), btnLogout: $("btnLogout"),
-      // crud
       judul: $("judul"), penulis: $("penulis"), kategori: $("kategori"),
       tahun: $("tahun"), stok: $("stok"),
       btnSimpan: $("btnSimpan"), btnBatal: $("btnBatal"),
@@ -308,19 +322,26 @@
     };
     const modalHapus = new bootstrap.Modal($("modalHapus"));
 
-    let dataBuku = {};      // cache data dari Firebase: { id: {judul, ...} }
-    let editId = null;      // id buku yang sedang diedit (null = mode tambah)
-    let hapusId = null;     // id buku yang akan dihapus
-    let unsubscribeBuku = null; // listener database, dimatikan saat logout
+    let dataBuku = {};
+    let editId = null;
+    let hapusId = null;
+    let unsubscribeBuku = null;
 
-    let modeAuth = "login"; 
+    let modeAuth = "login";
 
     function tampilkanErrorAuth(pesan) {
+      el.authInfo.classList.add("d-none");
       el.authAlert.textContent = pesan;
       el.authAlert.classList.remove("d-none");
     }
-    function sembunyikanErrorAuth() {
+    function tampilkanInfoAuth(pesan) {
       el.authAlert.classList.add("d-none");
+      el.authInfo.textContent = pesan;
+      el.authInfo.classList.remove("d-none");
+    }
+    function sembunyikanPesanAuth() {
+      el.authAlert.classList.add("d-none");
+      el.authInfo.classList.add("d-none");
     }
 
     function pesanErrorFirebase(err) {
@@ -329,17 +350,31 @@
         "auth/invalid-email": "Format email tidak valid.",
         "auth/weak-password": "Kata sandi minimal 6 karakter.",
         "auth/missing-password": "Kata sandi wajib diisi.",
-        "auth/invalid-credential": "Email atau kata sandi salah.",
+        "auth/invalid-credential": "Email tidak ditemukan atau kata sandi salah.",
         "auth/user-not-found": "Akun dengan email ini tidak ditemukan.",
         "auth/wrong-password": "Kata sandi salah.",
-        "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti."
+        "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi beberapa saat lagi."
       };
       return map[err.code] || ("Gagal: " + err.message);
     }
 
+    function tampilkanFormAuth() {
+      el.cekEmailBox.classList.add("d-none");
+      el.authFormBox.classList.remove("d-none");
+      el.btnKirimUlangLogin.classList.add("d-none");
+      sembunyikanPesanAuth();
+    }
+
+    function tampilkanCekEmail(email) {
+      el.authFormBox.classList.add("d-none");
+      el.cekEmailBox.classList.remove("d-none");
+      el.emailDikirim.textContent = email;
+      sembunyikanPesanAuth();
+    }
+
     function gantiTabAuth(mode) {
       modeAuth = mode;
-      sembunyikanErrorAuth();
+      tampilkanFormAuth();
       const isRegister = mode === "register";
       el.tabLogin.classList.toggle("active", !isRegister);
       el.tabRegister.classList.toggle("active", isRegister);
@@ -348,9 +383,12 @@
     }
     el.tabLogin.addEventListener("click", () => gantiTabAuth("login"));
     el.tabRegister.addEventListener("click", () => gantiTabAuth("register"));
+    el.btnKeAuthForm.addEventListener("click", tampilkanFormAuth);
+
+    let pendingUser = null;
 
     el.btnAuthSubmit.addEventListener("click", async () => {
-      sembunyikanErrorAuth();
+      sembunyikanPesanAuth();
       const email = el.authEmail.value.trim();
       const password = el.authPassword.value;
       const nama = el.authNama.value.trim();
@@ -361,14 +399,21 @@
       el.btnAuthSubmit.disabled = true;
       try {
         if (modeAuth === "register") {
-
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           await updateProfile(cred.user, { displayName: nama });
+          await sendEmailVerification(cred.user, actionCodeSettings);
+          await signOut(auth);
+          tampilkanCekEmail(email);
         } else {
-
-          await signInWithEmailAndPassword(auth, email, password);
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          if (!cred.user.emailVerified) {
+            pendingUser = cred.user;
+            await signOut(auth);
+            tampilkanErrorAuth("Email belum diverifikasi. Cek kotak masuk Anda, atau kirim ulang link verifikasi.");
+            el.btnKirimUlangLogin.classList.remove("d-none");
+            return;
+          }
         }
-
       } catch (err) {
         tampilkanErrorAuth(pesanErrorFirebase(err));
       } finally {
@@ -376,17 +421,36 @@
       }
     });
 
+    el.btnKirimUlangAwal.addEventListener("click", async () => {
+      if (!auth.currentUser) return tampilkanErrorAuth("Sesi tidak ditemukan, silakan login lalu coba lagi.");
+      try {
+        await sendEmailVerification(auth.currentUser, actionCodeSettings);
+        tampilkanInfoAuth("Email verifikasi sudah dikirim ulang.");
+      } catch (err) {
+        tampilkanErrorAuth(pesanErrorFirebase(err));
+      }
+    });
+
+    el.btnKirimUlangLogin.addEventListener("click", async () => {
+      if (!pendingUser) return;
+      try {
+        await sendEmailVerification(pendingUser, actionCodeSettings);
+        tampilkanInfoAuth("Email verifikasi sudah dikirim ulang ke " + pendingUser.email + ".");
+      } catch (err) {
+        tampilkanErrorAuth(pesanErrorFirebase(err));
+      }
+    });
+
     el.btnLogout.addEventListener("click", () => signOut(auth));
 
-
     onAuthStateChanged(auth, (user) => {
-      if (user) {
+      if (user && user.emailVerified) {
         el.authWrap.style.display = "none";
         el.appWrap.style.display = "block";
         el.userEmail.textContent = user.displayName || user.email;
         el.userAvatar.textContent = (user.displayName || user.email || "?").charAt(0).toUpperCase();
         el.authEmail.value = el.authPassword.value = el.authNama.value = "";
-
+        tampilkanFormAuth();
 
         unsubscribeBuku = onValue(booksRef, (snapshot) => {
           dataBuku = snapshot.val() || {};
@@ -401,13 +465,11 @@
       }
     });
 
-    // Status koneksi Firebase (database)
     onValue(ref(db, ".info/connected"), (snap) => {
       const online = snap.val() === true;
       el.statusDot.className = "dot " + (online ? "online" : "offline");
       el.statusText.textContent = online ? "Terhubung ke Firebase" : "Tidak terhubung";
     });
-
 
     function escapeHtml(text) {
       const div = document.createElement("div");
@@ -443,7 +505,6 @@
       return null;
     }
 
-
     el.btnSimpan.addEventListener("click", async () => {
       const error = validasi();
       if (error) return tampilkanError(error);
@@ -459,10 +520,8 @@
 
       try {
         if (editId) {
-
           await update(ref(db, `buku/${editId}`), buku);
         } else {
-          // CREATE: push() membuat ID unik otomatis, lalu set() menyimpan datanya
           buku.dibuatPada = Date.now();
           buku.dibuatOleh = auth.currentUser ? (auth.currentUser.email || "") : "";
           await set(push(booksRef), buku);
